@@ -73,10 +73,6 @@ async function handle(request, env) {
   const url = new URL(request.url);
   if (request.method === 'OPTIONS') return new Response(null, { headers: cors });
   if (url.pathname === '/api/state' && request.method === 'GET') return json(await state(env, tokenFrom(request)), 200, cors);
-  if (url.pathname.startsWith('/api/invoices/file/') && request.method === 'GET') {
-    const object = await env.INVOICES.get(url.pathname.split('/').pop());
-    return object ? new Response(object.body, { headers: { 'Content-Type': object.httpMetadata?.contentType || 'application/octet-stream', ...cors } }) : new Response('Not found', { status: 404 });
-  }
   let body = {};
   if (request.method !== 'GET') {
     if (Number(request.headers.get('content-length') || 0) > 8 * 1024 * 1024) return json({ error: 'requisição muito grande' }, 413, cors);
@@ -117,13 +113,7 @@ async function handle(request, env) {
     if (!['atividade', 'comida', 'bebida'].includes(body.kind) || !validDescription(description)) return json({ error: 'sugestão inválida' }, 400, cors);
     await env.DB.prepare('INSERT INTO ideas(kind,description,person) VALUES (?1,?2,?3)').bind(body.kind, description, person.name).run();
   } else if (request.method === 'POST' && url.pathname === '/api/invoices') {
-    const match = String(body.photo || '').match(/^data:(image\/(?:jpeg|png|webp));base64,(.+)$/);
-    if (!match) return json({ error: 'envie uma foto válida' }, 400, cors);
-    const bytes = Uint8Array.from(atob(match[2]), char => char.charCodeAt(0));
-    if (bytes.byteLength > 5 * 1024 * 1024) return json({ error: 'a foto deve ter no máximo 5 MB' }, 400, cors);
-    const key = `nota-${crypto.randomUUID()}.${match[1].split('/')[1]}`;
-    await env.INVOICES.put(key, bytes, { httpMetadata: { contentType: match[1] } });
-    await env.DB.prepare('INSERT INTO invoices(description,value,added_by,photo) VALUES (?1,0,?2,?3)').bind('Nota fiscal', person.name, `/api/invoices/file/${key}`).run();
+    return json({ error: 'notas fiscais temporariamente indisponíveis; o armazenamento de arquivos ainda não foi ativado' }, 503, cors);
   } else if (request.method === 'DELETE' && /^\/api\/(items|purchases|invoices|shopping_notes|checklist|ideas|rules)\/\d+$/.test(url.pathname)) {
     await env.DB.prepare(`DELETE FROM ${url.pathname.split('/')[2]} WHERE id=?1`).bind(Number(url.pathname.split('/').pop())).run();
   } else return json({ error: 'rota inválida' }, 404, cors);

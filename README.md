@@ -37,7 +37,7 @@ O caminho `/dev-full-stack-fabiano` pode ser usado como rota ou projeto no domí
 
 ## Cloudflare Pages + Workers
 
-O frontend pode ser publicado no Cloudflare Pages usando a raiz deste repositório. A API Cloudflare fica em `worker/` e usa D1 para dados e R2 para notas fiscais; ela não usa o SQLite local.
+O frontend pode ser publicado no Cloudflare Pages usando a raiz deste repositório. A API Cloudflare fica em `worker/` e usa D1 para os dados. O R2 é opcional e, enquanto não for ativado, o envio de notas fiscais permanece desabilitado.
 
 1. Instale o Wrangler e faça login:
 
@@ -46,11 +46,10 @@ npm install -g wrangler
 wrangler login
 ```
 
-2. Crie os recursos:
+2. Crie o recurso D1:
 
 ```powershell
 wrangler d1 create portal-sol
-wrangler r2 bucket create portal-sol-invoices
 ```
 
 Copie o `database_id` retornado para `worker/wrangler.toml`.
