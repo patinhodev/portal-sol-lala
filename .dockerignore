@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+*.bak
+.git/
+data/
+weekend.db
+.venv/
+__pycache__/
+current.png

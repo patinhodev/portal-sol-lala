@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Administração • Portal do Sol</title>
+  <link rel="stylesheet" href="static/style.css?v=20261008-1820">
+</head>
+<body>
+  <main class="wrap admin-page">
+    <section class="panel">
+      <h1>🔐 Administração</h1>
+      <p>Área reservada para gerenciar os links individuais.</p>
+      <form id="admin-login">
+        <input id="admin-password" type="password" placeholder="Senha administrativa" required>
+        <button>Entrar</button>
+      </form>
+      <p id="admin-message" class="muted" role="status"></p>
+      <div id="admin-links"></div>
+    </section>
+  </main>
+  <script>
+    const byId = id => document.getElementById(id);
+    let password = '';
+    async function api(url, options) {
+      const response = await fetch(url, options);
+      return response.json();
+    }
+    async function loadLinks(event) {
+      if (event) event.preventDefault();
+      password = byId('admin-password').value;
+      const result = await api('/api/admin/links', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({password})});
+      if (result.error) {
+        byId('admin-message').textContent = 'Senha inválida.';
+        byId('admin-links').replaceChildren();
+        return;
+      }
+      byId('admin-message').textContent = 'Links individuais cadastrados:';
+      const container = byId('admin-links');
+      container.replaceChildren(...result.links.map(item => {
+        const row = document.createElement('div');
+        row.className = 'admin-link';
+        const name = document.createElement('b');
+        name.textContent = item.name;
+        const link = document.createElement('input');
+        link.readOnly = true;
+        link.value = location.origin + '/' + item.link;
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.disabled = item.blocked;
+        button.textContent = item.blocked ? 'Bloqueado' : 'Bloquear';
+        if (!item.blocked) button.addEventListener('click', () => block(item.id));
+        row.append(name, link, button);
+        return row;
+      }));
+    }
+    async function block(participantId) {
+      const response = await api('/api/admin/block', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({password, participant_id: participantId})
+      });
+      if (response.error) {
+        byId('admin-message').textContent = response.error;
+        return;
+      }
+      await loadLinks();
+    }
+    byId('admin-login').addEventListener('submit', loadLinks);
+  </script>
+</body>
+</html>

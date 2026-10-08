@@ -1,0 +1,16 @@
+services:
+  portal-sol:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      PORTAL_ADMIN_PASSWORD_HASH: ${PORTAL_ADMIN_PASSWORD_HASH:?Defina PORTAL_ADMIN_PASSWORD_HASH}
+      PORTAL_DATA_DIR: /app/data
+    volumes:
+      - portal_data:/app/data
+      - invoice_data:/app/static/notas-fiscais
+    restart: unless-stopped
+
+volumes:
+  portal_data:
+  invoice_data:

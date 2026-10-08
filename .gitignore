@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+*.pyc
+*.bak
+.env
+.env.*
+!.env.example
+weekend.db
+data/
+notas-fiscais/
+static/notas-fiscais/*
+!static/notas-fiscais/.gitkeep
+current.png
+.vscode/
