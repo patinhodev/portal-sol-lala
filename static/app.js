@@ -1,9 +1,10 @@
 const $ = id => document.getElementById(id);
-const route = path => location.search ? path + location.search : path;
+const API_BASE = window.PORTAL_API_BASE || '';
+const route = path => `${API_BASE}${path}${location.search}`;
 const money = value => Number(value || 0).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 async function api(url, method = 'GET', data) {
-  const response = await fetch(url, {method, headers: data ? {'Content-Type': 'application/json'} : {}, body: data ? JSON.stringify(data) : undefined});
+  const response = await fetch(`${API_BASE}${url}`, {method, headers: data ? {'Content-Type': 'application/json'} : {}, body: data ? JSON.stringify(data) : undefined});
   return response.json();
 }
 function openGallery() { $('site-gallery').hidden = false; }

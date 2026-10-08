@@ -1,0 +1,13 @@
+name = "portal-sol-api"
+main = "src/index.js"
+compatibility_date = "2026-10-08"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "portal-sol"
+database_id = "PREENCHA_COM_O_ID_DO_D1"
+migrations_dir = "migrations"
+
+[[r2_buckets]]
+binding = "INVOICES"
+bucket_name = "portal-sol-invoices"

@@ -21,9 +21,10 @@
   </main>
   <script>
     const byId = id => document.getElementById(id);
+    const API_BASE = window.PORTAL_API_BASE || '';
     let password = '';
     async function api(url, options) {
-      const response = await fetch(url, options);
+      const response = await fetch(API_BASE + url, options);
       return response.json();
     }
     async function loadLinks(event) {
