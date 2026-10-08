@@ -1,6 +1,6 @@
 const $ = id => document.getElementById(id);
 const API_BASE = window.PORTAL_API_BASE || '';
-const route = path => `${API_BASE}${path}${location.search}`;
+const route = path => `${path}${location.search}`;
 const money = value => Number(value || 0).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 async function api(url, method = 'GET', data) {
