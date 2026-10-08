@@ -8,6 +8,7 @@ const text = value => String(value ?? '').trim();
 const tokenFrom = request => new URL(request.url).searchParams.get('p') || '';
 const validName = value => /^[\p{L}\w .-]{1,80}$/u.test(value);
 const validDescription = value => value && value.length <= 300;
+const MAX_INVOICE_BYTES = 1024 * 1024;
 
 async function digest(value) {
   const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value));
@@ -61,7 +62,7 @@ async function state(env, token) {
   rows.forEach(item => { paid[item.person] = (paid[item.person] || 0) + Number(item.value); });
   const registered = [...new Set(rows.map(item => item.person).filter(Boolean))].sort();
   return {
-    participants: participants.results, items: items.results, purchases: rows, invoices: invoices.results,
+    participants: participants.results, items: items.results, purchases: rows,     invoices: invoices.results.map(item => ({ ...item, photo: `/api/invoices/file/${item.id}${token ? `?p=${encodeURIComponent(token)}` : ''}` })),
     shopping_notes: shopping_notes.results, checkin: checkin.results, checkout: checkout.results,
     rules: rules.results, activities: activities.results, foods: foods.results, drinks: drinks.results,
     total, share, balances: registered.map(name => ({ name, paid: paid[name] || 0, balance: (paid[name] || 0) - share })),
@@ -73,6 +74,15 @@ async function handle(request, env) {
   const url = new URL(request.url);
   if (request.method === 'OPTIONS') return new Response(null, { headers: cors });
   if (url.pathname === '/api/state' && request.method === 'GET') return json(await state(env, tokenFrom(request)), 200, cors);
+  const invoiceMatch = url.pathname.match(/^\/api\/invoices\/file\/(\d+)$/);
+  if (invoiceMatch && request.method === 'GET') {
+    const person = await requireParticipant(env, tokenFrom(request));
+    if (!person) return new Response('Forbidden', { status: 403, headers: cors });
+    const invoice = await env.DB.prepare('SELECT photo_data,photo_type FROM invoices WHERE id=?1').bind(Number(invoiceMatch[1])).first();
+    if (!invoice?.photo_data || !invoice.photo_type) return new Response('Not found', { status: 404, headers: cors });
+    const bytes = Uint8Array.from(atob(invoice.photo_data), char => char.charCodeAt(0));
+    return new Response(bytes, { headers: { 'Content-Type': invoice.photo_type, 'Cache-Control': 'private, no-store', ...cors } });
+  }
   let body = {};
   if (request.method !== 'GET') {
     if (Number(request.headers.get('content-length') || 0) > 8 * 1024 * 1024) return json({ error: 'requisição muito grande' }, 413, cors);
@@ -113,7 +123,15 @@ async function handle(request, env) {
     if (!['atividade', 'comida', 'bebida'].includes(body.kind) || !validDescription(description)) return json({ error: 'sugestão inválida' }, 400, cors);
     await env.DB.prepare('INSERT INTO ideas(kind,description,person) VALUES (?1,?2,?3)').bind(body.kind, description, person.name).run();
   } else if (request.method === 'POST' && url.pathname === '/api/invoices') {
-    return json({ error: 'notas fiscais temporariamente indisponíveis; o armazenamento de arquivos ainda não foi ativado' }, 503, cors);
+    const match = String(body.photo || '').match(/^data:(image\/(?:jpeg|png|webp));base64,(.+)$/);
+    if (!match) return json({ error: 'envie uma foto válida' }, 400, cors);
+    const encoded = match[2];
+    const estimatedBytes = Math.floor(encoded.length * 3 / 4);
+    if (estimatedBytes > MAX_INVOICE_BYTES) return json({ error: 'a foto deve ter no máximo 1 MB' }, 413, cors);
+    const bytes = Uint8Array.from(atob(encoded), char => char.charCodeAt(0));
+    if (bytes.byteLength > MAX_INVOICE_BYTES) return json({ error: 'a foto deve ter no máximo 1 MB' }, 413, cors);
+    await env.DB.prepare('INSERT INTO invoices(description,value,added_by,photo,photo_data,photo_type) VALUES (?1,0,?2,?3,?4,?5)')
+      .bind('Nota fiscal', person.name, '', encoded, match[1]).run();
   } else if (request.method === 'DELETE' && /^\/api\/(items|purchases|invoices|shopping_notes|checklist|ideas|rules)\/\d+$/.test(url.pathname)) {
     await env.DB.prepare(`DELETE FROM ${url.pathname.split('/')[2]} WHERE id=?1`).bind(Number(url.pathname.split('/').pop())).run();
   } else return json({ error: 'rota inválida' }, 404, cors);

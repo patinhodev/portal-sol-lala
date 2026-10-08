@@ -8,7 +8,7 @@ Aplicação colaborativa para organizar o fim de semana, com listas de compras, 
 - `admin.html`: painel administrativo separado.
 - `server.py`: servidor HTTP e API SQLite.
 - `static/`: JavaScript, CSS, fotos e uploads de notas fiscais.
-- `worker/`: API Cloudflare Workers, migration D1 e configuração R2.
+- `worker/`: API Cloudflare Workers e migrations D1.
 - `weekend.db`: banco local de desenvolvimento; não deve ser versionado. Em Docker, os dados ficam em `/app/data`.
 
 ## Execução local
@@ -33,11 +33,11 @@ Abra `http://127.0.0.1:8000/`. A administração fica em `http://127.0.0.1:8000/
 
 ## Publicação
 
-O caminho `/dev-full-stack-fabiano` pode ser usado como rota ou projeto no domínio, mas não substitui a hospedagem da API. Configure o proxy para encaminhar esse caminho ao servidor da aplicação e mantenha a API protegida por HTTPS.
+O caminho público será exatamente `/dev-full-stack-fabiano`. Ele deve ser configurado no domínio do Cloudflare Pages; não é um mecanismo de segurança.
 
 ## Cloudflare Pages + Workers
 
-O frontend pode ser publicado no Cloudflare Pages usando a raiz deste repositório. A API Cloudflare fica em `worker/` e usa D1 para os dados. O R2 é opcional e, enquanto não for ativado, o envio de notas fiscais permanece desabilitado.
+O frontend pode ser publicado no Cloudflare Pages usando a raiz deste repositório. A API Cloudflare fica em `worker/` e usa D1 para os dados, inclusive fotos de notas fiscais de até 1 MB. O R2 não é necessário.
 
 1. Instale o Wrangler e faça login:
 
@@ -46,7 +46,7 @@ npm install -g wrangler
 wrangler login
 ```
 
-2. Crie o recurso D1:
+2. O D1 `portal-sol` já foi criado nesta conta. Confirme o `database_id` em `worker/wrangler.toml`. Se estiver configurando outra conta, crie o recurso:
 
 ```powershell
 wrangler d1 create portal-sol
@@ -74,10 +74,21 @@ Remove-Item worker/seed.generated.sql
 wrangler secret put PORTAL_ADMIN_PASSWORD_HASH --config worker/wrangler.toml
 ```
 
-5. Publique a API:
+5. Publique a API e copie a URL `workers.dev` retornada:
 
 ```powershell
 wrangler deploy --config worker/wrangler.toml
 ```
 
-Configure o Worker em uma rota `/api/*` do mesmo domínio do Pages, ou defina `window.PORTAL_API_BASE` antes de `static/app.js` apontar para a URL do Worker. O `database_id`, a senha e os tokens não devem ser commitados.
+6. Publique o frontend no Pages:
+
+```powershell
+wrangler pages project create portal-sol-site --production-branch main
+wrangler pages deploy . --project-name portal-sol-site
+```
+
+O Worker publicado nesta configuração usa `https://portal-sol-api.fabianojbandrade.workers.dev`. No domínio próprio, configure o caminho exatamente como `/dev-full-stack-fabiano`.
+
+7. Configure a rota `/api/*` para o Worker no domínio do Pages, ou mantenha a URL `workers.dev` em `static/config.js`. Faça testes de leitura, gravação, administração, upload de nota e bloqueio antes de compartilhar os links.
+
+O `database_id`, a senha e os tokens não devem ser commitados. No D1, as imagens ficam em Base64 e são limitadas a 1 MB para evitar crescimento descontrolado.

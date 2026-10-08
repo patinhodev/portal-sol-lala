@@ -1,0 +1,10 @@
+{
+  "private": true,
+  "scripts": {
+    "cloudflare:deploy": "wrangler deploy --config worker/wrangler.toml",
+    "cloudflare:pages": "wrangler pages deploy . --project-name portal-sol-site"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}
