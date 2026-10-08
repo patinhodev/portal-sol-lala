@@ -12,5 +12,6 @@ static/notas-fiscais/*
 !static/notas-fiscais/.gitkeep
 current.png
 .vscode/
+node_modules/
 worker/.wrangler/
 worker/seed.generated.sql
